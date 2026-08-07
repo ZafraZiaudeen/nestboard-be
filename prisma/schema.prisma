@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+  PENDING
+}
+
+enum PropertyType {
+  HOUSE
+  VILLA
+  APARTMENT
+  HOTEL
+}
+
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  email       String   @unique
+  displayName String   @map("display_name")
+  avatarUrl   String?  @map("avatar_url")
+  bioTag      String?  @map("bio_tag")
+  role        Role     @default(USER)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  properties Property[] @relation("VendorProperties")
+  bookings   Booking[]
+
+  @@map("users")
+}
+
+model Property {
+  id           String       @id @default(uuid()) @db.Uuid
+  vendorId     String       @map("vendor_id") @db.Uuid
+  title        String
+  description  String       @db.Text
+  address      String
+  city         String
+  type         PropertyType
+  rating       Decimal      @default(0) @db.Decimal(3, 2)
+  amenities    String[]     @default([])
+  latitude     Float
+  longitude    Float
+  imageUrl     String       @map("image_url")
+  minStay      String       @default("1 month") @map("min_stay")
+  isActive     Boolean      @default(true) @map("is_active")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  vendor User   @relation("VendorProperties", fields: [vendorId], references: [id], onDelete: Cascade)
+  rooms  Room[]
+
+//keys provided for efficient querying based on city, type, and vendorId
+  @@index([city])
+  @@index([type])
+  @@index([vendorId])
+  @@map("properties")
+}
+
+model Room {
+  id            String   @id @default(uuid()) @db.Uuid
+  propertyId    String   @map("property_id") @db.Uuid
+  name          String
+  pricePerMonth Decimal  @map("price_per_month") @db.Decimal(10, 2)
+  seatCapacity  Int      @map("seat_capacity")
+  hasAC         Boolean  @default(false) @map("has_ac")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  property Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([propertyId])
+  @@map("rooms")
+}
+
+model Booking {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @map("tenant_id") @db.Uuid
+  roomId         String        @map("room_id") @db.Uuid
+  seatNumber     Int           @map("seat_number")
+  leaseStart     DateTime      @map("lease_start") @db.Date
+  leaseEnd       DateTime      @map("lease_end") @db.Date
+  durationMonths Int           @map("duration_months")
+  totalAmount    Decimal       @map("total_amount") @db.Decimal(10, 2)
+  paymentStatus  PaymentStatus @default(PENDING) @map("payment_status")
+  bookingStatus  BookingStatus @default(PENDING) @map("booking_status")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  tenant User @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  room   Room @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@index([roomId, seatNumber, bookingStatus, leaseStart, leaseEnd])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("bookings")
+}

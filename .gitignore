@@ -1,0 +1,10 @@
+node_modules/
+dist/
+scratch/
+.env
+.env.local
+*.log
+.DS_Store
+coverage/
+.env
+/src/generated/prisma
