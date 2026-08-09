@@ -5,9 +5,14 @@ import { Errors } from '../lib/errors.js';
 import { createRoomSchema, type CreateRoomInput } from '../schemas/room.js';
 import { roomTypeSchema } from '../schemas/room-type.js';
 import { toPropertyDTO } from '../lib/dto.js';
-export const propertiesRouter: Router = Router()
 import { prisma } from '../lib/prisma.js';
-import { verifyJwt } from '../middleware/auth.js';
+import { requireRole,verifyJwt } from '../middleware/auth.js';
+import { Role } from "../generated/enums.js";
+
+
+export const propertiesRouter: Router = Router()
+
+propertiesRouter.use(verifyJwt);
 
 propertiesRouter.get('/', async (_req, res, next) => {
     try {
@@ -41,7 +46,7 @@ propertiesRouter.get('/:id', async (req, res, next) => {
 })
 //make sure whatever is sent in the request body matches the schema defined in createPropertySchema. 
 // If it does, it will be added to the PROPERTIES array and returned in the response. If not, an error will be thrown.
-propertiesRouter.post('/', verifyJwt, validateBody(createPropertySchema), async (req, res, next) => {
+propertiesRouter.post('/', requireRole(Role.ADMIN), validateBody(createPropertySchema), async (req, res, next) => {
     try {
         const userId = req.user?.id;
         if (!userId) throw Errors.unauthenticated()
