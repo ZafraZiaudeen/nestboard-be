@@ -1,10 +1,20 @@
+import argon2 from 'argon2';
 import { prisma } from '../src/lib/prisma.js';
 import { Role, PropertyType } from '../src/generated/enums.js';
 
 async function main() {
+
+  const passwordHash = await argon2.hash('password123');
+
   const vendor = await prisma.user.upsert({
     where: { email: 'vendor@nestboard.dev' },
-    create: { email: 'vendor@nestboard.dev', displayName: 'Aisha Perera', role: Role.ADMIN, bioTag: 'Property Manager' },
+    create: { email: 'vendor@nestboard.dev', displayName: 'Aisha Perera', role: Role.ADMIN, bioTag: 'Property Manager', passwordHash },
+    update: {},
+  });
+
+  const vendorB = await prisma.user.upsert({
+    where: { email: 'vendorb@nestboard.dev' },
+    create: { email: 'vendorb@nestboard.dev', displayName: 'Bandara Perera', role: Role.ADMIN, bioTag: 'Property Manager', passwordHash },
     update: {},
   });
 
@@ -14,7 +24,7 @@ async function main() {
     { email: 'tenant2@nestboard.dev', displayName: 'Nethmi Fernando' },
     { email: 'tenant3@nestboard.dev', displayName: 'Tharindu Bandara' },
   ]) {
-    await prisma.user.upsert({ where: { email: t.email }, create: { ...t, role: Role.USER }, update: {} });
+    await prisma.user.upsert({ where: { email: t.email }, create: { ...t, role: Role.USER, passwordHash }, update: {} });
   }
 
   const existing = await prisma.property.findFirst({ where: { vendorId: vendor.id, title: 'Sunset Apartment' } });
