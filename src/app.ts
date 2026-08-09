@@ -7,7 +7,12 @@ import { errorHandler } from './middleware/error-handler.js';
 import { authRouter } from './routes/auth.js';
 import helmet from 'helmet';
 import cors from 'cors';
-import { corsOrigins } from './lib/env.js';
+import { corsOrigins, env } from './lib/env.js';
+import { bookingsRouter } from './routes/bookings.js';
+import { uploadsRouter } from './routes/uploads.js';
+import path from "node:path";
+
+
 
 export function buildApp(): Express {
     const app = express();
@@ -21,6 +26,9 @@ export function buildApp(): Express {
     app.use('/api/health', healthRouter);
     app.use('/api/properties', propertiesRouter);
     app.use('/api/auth', authRouter);
+    app.use('/api/bookings', bookingsRouter);
+     app.use("/api/uploads", uploadsRouter);
+  app.use("/uploads", express.static(path.resolve(env.UPLOAD_LOCAL_DIR)))
 
     app.get('/', (_req, res) => {
         res.send('Hello Nestboard')
