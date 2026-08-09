@@ -9,3 +9,10 @@ export function validateBody<S extends z.ZodType>(schema: S): RequestHandler {
         next();
     }
 }
+
+export function validateParams<S extends z.ZodType>(schema: S): RequestHandler {
+  return (req, _res, next) => {
+    req.params = schema.parse(req.params) as never;
+    next();
+  };
+}

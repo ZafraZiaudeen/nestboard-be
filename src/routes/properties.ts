@@ -39,7 +39,7 @@ propertiesRouter.get('/:id', async (req, res, next) => {
             include: { rooms: true },
         });
         if (!property) throw Errors.notFound('Property');
-        res.json(property.rooms);
+        res.json(property);
     } catch (err) {
         next(err);
     }
@@ -75,6 +75,23 @@ propertiesRouter.delete('/:id', async (req, res, next) => {
         next(err)
     }
 })
+
+propertiesRouter.get("/:id/rooms", async (req, res, next) => {
+  try {
+    const property = await prisma.property.findUnique({
+      where: { id: req.params.id },
+      include: { rooms: true },
+    });
+
+    if (!property) throw Errors.notFound("Property");
+
+    res.json(property.rooms);
+  } catch (err) {
+    next(err);
+  }
+});
+
+
 // const ROOMS = [
 //     { id: 'r1', propertyId: 'prop-001', name: 'Room A', price: 20000, seatsTotal: 2, seatsFree: 1, hasAC: true },
 //     { id: 'r2', propertyId: 'prop-001', name: 'Room B', price: 22000, seatsTotal: 2, seatsFree: 2, hasAC: true },
