@@ -54,8 +54,10 @@ export const ModelName = {
   User: 'User',
   RefreshToken: 'RefreshToken',
   Property: 'Property',
+  RoomType: 'RoomType',
   Room: 'Room',
-  Booking: 'Booking'
+  Booking: 'Booking',
+  Favorite: 'Favorite'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -121,13 +123,25 @@ export const PropertyScalarFieldEnum = {
 export type PropertyScalarFieldEnum = (typeof PropertyScalarFieldEnum)[keyof typeof PropertyScalarFieldEnum]
 
 
-export const RoomScalarFieldEnum = {
+export const RoomTypeScalarFieldEnum = {
   id: 'id',
   propertyId: 'propertyId',
   name: 'name',
   pricePerMonth: 'pricePerMonth',
   seatCapacity: 'seatCapacity',
   hasAC: 'hasAC',
+  isAvailable: 'isAvailable',
+  createdAt: 'createdAt'
+} as const
+
+export type RoomTypeScalarFieldEnum = (typeof RoomTypeScalarFieldEnum)[keyof typeof RoomTypeScalarFieldEnum]
+
+
+export const RoomScalarFieldEnum = {
+  id: 'id',
+  roomTypeId: 'roomTypeId',
+  roomLabel: 'roomLabel',
+  isAvailable: 'isAvailable',
   createdAt: 'createdAt'
 } as const
 
@@ -149,6 +163,15 @@ export const BookingScalarFieldEnum = {
 } as const
 
 export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeof BookingScalarFieldEnum]
+
+
+export const FavoriteScalarFieldEnum = {
+  userId: 'userId',
+  propertyId: 'propertyId',
+  createdAt: 'createdAt'
+} as const
+
+export type FavoriteScalarFieldEnum = (typeof FavoriteScalarFieldEnum)[keyof typeof FavoriteScalarFieldEnum]
 
 
 export const SortOrder = {

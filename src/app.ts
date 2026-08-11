@@ -11,6 +11,7 @@ import { corsOrigins, env } from './lib/env.js';
 import { bookingsRouter } from './routes/bookings.js';
 import { uploadsRouter } from './routes/uploads.js';
 import path from "node:path";
+import { rateLimit } from 'express-rate-limit';
 
 
 
@@ -22,6 +23,14 @@ export function buildApp(): Express {
     app.use(helmet());
     app.use(cors({ origin: corsOrigins, credentials: false}))
     app.use(express.json({ limit: '1mb' }));
+
+    const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: env.RATE_LIMIT,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+    app.use('/api', apiLimiter);
 
     app.use('/api/health', healthRouter);
     app.use('/api/properties', propertiesRouter);

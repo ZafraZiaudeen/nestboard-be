@@ -28,15 +28,16 @@ export async function createBookingPending(
 // This is particularly important in scenarios where we need to check for conflicts, update existing records, and create new bookings without leaving the database in an inconsistent state.
 //For example let's say two users are trying to book the same seat at the same time. Without a transaction, both users could potentially pass the conflict check and create bookings for the same seat, leading to overbooking. 
 // By using a transaction, we ensure that once one user's booking is being processed, the other user's booking will wait until the first transaction is complete, thus preventing conflicts and maintaining data integrity.
-  return db.$transaction(
+   return db.$transaction(
     async (tx) => {
       const room = await tx.room.findUnique({
         where: { id: input.roomId },
+        include: { roomType: true },
       });
       if (!room) throw Errors.notFound("Room");
-      if (input.seatNumber > room.seatCapacity) {
+      if (input.seatNumber > room.roomType.seatCapacity) {
         throw Errors.validation(
-          `Seat ${input.seatNumber} exceeds capacity ${room.seatCapacity}`,
+          `Seat ${input.seatNumber} exceeds capacity ${room.roomType.seatCapacity}`,
         );
       }
 
@@ -71,7 +72,7 @@ export async function createBookingPending(
         }
       }
 
-      const totalAmount = room.pricePerMonth.mul(input.durationMonths);
+       const totalAmount = room.roomType.pricePerMonth.mul(input.durationMonths);
 
       return tx.booking.create({
         data: {
@@ -138,7 +139,7 @@ export async function listMyBookings(
     where: { tenantId },
     orderBy: { createdAt: "desc" },
     include: {
-      room: { include: { property: true } },
+      room: { include: { roomType: { include: { property: true } } } },
     },
   });
 }

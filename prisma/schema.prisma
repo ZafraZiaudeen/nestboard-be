@@ -44,8 +44,10 @@ model User {
   properties Property[] @relation("VendorProperties")
   bookings   Booking[]
 
-  passwordHash String? @map("password_hash")
+  passwordHash  String?        @map("password_hash")
   refreshTokens RefreshToken[]
+
+  favorites Favorite[]
 
   @@map("users")
 }
@@ -65,24 +67,24 @@ model RefreshToken {
 }
 
 model Property {
-  id           String       @id @default(uuid()) @db.Uuid
-  vendorId     String       @map("vendor_id") @db.Uuid
-  title        String
-  description  String       @db.Text
-  address      String
-  city         String
-  type         PropertyType
-  rating       Decimal      @default(0) @db.Decimal(3, 2)
-  amenities    String[]     @default([])
-  latitude     Float
-  longitude    Float
-  imageUrl     String       @map("image_url")
-  minStay      String       @default("1 month") @map("min_stay")
-  isActive     Boolean      @default(true) @map("is_active")
-  createdAt    DateTime     @default(now()) @map("created_at")
-
-  vendor User   @relation("VendorProperties", fields: [vendorId], references: [id], onDelete: Cascade)
-  rooms  Room[]
+  id          String       @id @default(uuid()) @db.Uuid
+  vendorId    String       @map("vendor_id") @db.Uuid
+  title       String
+  description String       @db.Text
+  address     String
+  city        String
+  type        PropertyType
+  rating      Decimal      @default(0) @db.Decimal(3, 2)
+  amenities   String[]     @default([])
+  latitude    Float
+  longitude   Float
+  imageUrl    String       @map("image_url")
+  minStay     String       @default("1 month") @map("min_stay")
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  favoritedBy Favorite[]
+  vendor      User         @relation("VendorProperties", fields: [vendorId], references: [id], onDelete: Cascade)
+  roomTypes   RoomType[]
 
   @@index([city])
   @@index([type])
@@ -90,19 +92,34 @@ model Property {
   @@map("properties")
 }
 
-model Room {
+model RoomType {
   id            String   @id @default(uuid()) @db.Uuid
   propertyId    String   @map("property_id") @db.Uuid
   name          String
   pricePerMonth Decimal  @map("price_per_month") @db.Decimal(10, 2)
   seatCapacity  Int      @map("seat_capacity")
   hasAC         Boolean  @default(false) @map("has_ac")
+  isAvailable   Boolean  @default(true) @map("is_available")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  property Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  bookings Booking[]
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  rooms    Room[]
 
   @@index([propertyId])
+  @@map("room_types")
+}
+
+model Room {
+  id          String   @id @default(uuid()) @db.Uuid
+  roomTypeId  String   @map("room_type_id") @db.Uuid
+  roomLabel   String   @map("room_label")
+  isAvailable Boolean  @default(true) @map("is_available")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roomType RoomType  @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([roomTypeId])
   @@map("rooms")
 }
 
@@ -125,4 +142,18 @@ model Booking {
   @@index([roomId, seatNumber, bookingStatus, leaseStart, leaseEnd])
   @@index([tenantId, createdAt(sort: Desc)])
   @@map("bookings")
+}
+
+// This model represents the favorite properties of users.
+model Favorite {
+  userId     String   @map("user_id") @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, propertyId])
+  @@index([propertyId])
+  @@map("favorites")
 }
