@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "seed": "tsx prisma/seed.ts",
-    "format": "npx prettier . --write"
+    "format": "npx prettier . --write",
+    "format:check": "npx prettier . --check"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

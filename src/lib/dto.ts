@@ -2,7 +2,7 @@ import type {
   Property as PrismaProperty,
   Room as PrismaRoom,
   RoomType as PrismaRoomType,
-   Booking as PrismaBooking,
+  Booking as PrismaBooking,
 } from "../generated/client.js";
 import type { PropertyType } from "../generated/client.js";
 
@@ -142,8 +142,7 @@ export function toPropertyDetailDTO(
   };
 }
 
-
-type RoomTypeWithProperty = PrismaRoomType & { property: PrismaProperty}
+type RoomTypeWithProperty = PrismaRoomType & { property: PrismaProperty };
 type RoomWithRoomType = PrismaRoom & { roomType: RoomTypeWithProperty };
 type BookingWithDetails = PrismaBooking & { room: RoomWithRoomType };
 

@@ -1,12 +1,12 @@
-import { Router } from 'express';
-import multer from 'multer';
-import path from 'node:path';
-import fs from 'node:fs';
-import { randomUUID } from 'node:crypto';
-import { Role } from '../generated/enums.js';
-import { verifyJwt, requireRole } from '../middleware/auth.js';
-import { env } from '../lib/env.js';
-import { Errors } from '../lib/errors.js';
+import { Router } from "express";
+import multer from "multer";
+import path from "node:path";
+import fs from "node:fs";
+import { randomUUID } from "node:crypto";
+import { Role } from "../generated/enums.js";
+import { verifyJwt, requireRole } from "../middleware/auth.js";
+import { env } from "../lib/env.js";
+import { Errors } from "../lib/errors.js";
 
 export const uploadsRouter = Router();
 
@@ -24,21 +24,28 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const ok: boolean = ['image/jpeg','image/png', 'image/webp'].includes(file.mimetype);
-    cb(ok ? null : Errors.validation('Only JPG/PNG/WEBP images are allowed') as any, ok);
+    const ok: boolean = ["image/jpeg", "image/png", "image/webp"].includes(
+      file.mimetype,
+    );
+    cb(
+      ok
+        ? null
+        : (Errors.validation("Only JPG/PNG/WEBP images are allowed") as any),
+      ok,
+    );
   },
 });
 
 uploadsRouter.post(
-  '/cover-image',
+  "/cover-image",
   verifyJwt,
   requireRole(Role.ADMIN),
-  upload.single('image'),
+  upload.single("image"),
   (req, res, next) => {
     if (!req.file) {
-      next(Errors.validation('Missing image field'));
+      next(Errors.validation("Missing image field"));
       return;
     }
     res.status(201).json({ url: `/uploads/${req.file.filename}` });
-  }
+  },
 );

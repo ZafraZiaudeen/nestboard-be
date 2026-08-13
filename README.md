@@ -42,7 +42,7 @@ The `server` / `app` split exists so tests can import the app factory without bi
 ## Conventions
 
 - **Status codes are deliberate.** 200 / 201 / 204 / 400 / 401 / 403 / 404 / 409 / 422 / 500. Every code is a choice.
-- **TypeScript imports end in `.js`** even though source is `.ts` — Node loads what's on disk, the import path matches the *output* filename.
+- **TypeScript imports end in `.js`** even though source is `.ts` — Node loads what's on disk, the import path matches the _output_ filename.
 - **Migrations and history are append-only** once shared. Never edit a committed migration or rewrite history other people might have pulled.
 
 ## For students
