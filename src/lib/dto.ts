@@ -2,6 +2,7 @@ import type {
   Property as PrismaProperty,
   Room as PrismaRoom,
   RoomType as PrismaRoomType,
+   Booking as PrismaBooking,
 } from "../generated/client.js";
 import type { PropertyType } from "../generated/client.js";
 
@@ -138,5 +139,37 @@ export function toPropertyDetailDTO(
     startingPrice: minPrice !== null ? `LKR ${compactKilo(minPrice)}` : "-",
     image: p.imageUrl,
     roomTypes,
+  };
+}
+
+
+type RoomTypeWithProperty = PrismaRoomType & { property: PrismaProperty}
+type RoomWithRoomType = PrismaRoom & { roomType: RoomTypeWithProperty };
+type BookingWithDetails = PrismaBooking & { room: RoomWithRoomType };
+
+export function toBookingDTO(booking: BookingWithDetails) {
+  return {
+    id: booking.id,
+    status: booking.bookingStatus,
+    paymentStatus: booking.paymentStatus,
+    seatNumber: booking.seatNumber,
+    leaseStart: booking.leaseStart.toISOString().slice(0, 10),
+    leaseEnd: booking.leaseEnd.toISOString().slice(0, 10),
+    durationMonths: booking.durationMonths,
+    totalAmount: booking.totalAmount.toString(),
+    property: {
+      id: booking.room.roomType.property.id,
+      title: booking.room.roomType.property.title,
+      city: booking.room.roomType.property.city,
+    },
+    roomType: {
+      id: booking.room.roomType.id,
+      name: booking.room.roomType.name,
+      price: booking.room.roomType.pricePerMonth.toString(),
+    },
+    room: {
+      id: booking.room.id,
+      roomLabel: booking.room.roomLabel,
+    },
   };
 }

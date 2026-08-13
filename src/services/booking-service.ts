@@ -86,6 +86,17 @@ export async function createBookingPending(
           paymentStatus: PaymentStatus.PENDING,
           bookingStatus: BookingStatus.PENDING,
         },
+        include: {
+          room: {
+            include: {
+              roomType: {
+                include: {
+                  property: true
+                }
+              }
+            }
+          }
+        }
       });
     },
     {
