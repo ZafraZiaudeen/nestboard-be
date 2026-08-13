@@ -46,7 +46,7 @@ propertiesRouter.get("/", async (req, res, next) => {
         orderBy: { createdAt: "desc" },
         skip,
         take,
-        include: { roomTypes: true  },
+        include: { roomTypes: true },
       }),
     ]);
     const totalPages = Math.ceil(total / limit);
@@ -142,8 +142,8 @@ propertiesRouter.get(
   },
 );
 
-// This route handler toggles the favorite status of a property for the authenticated user. 
-// If the property is already favorited, it will be removed from favorites; 
+// This route handler toggles the favorite status of a property for the authenticated user.
+// If the property is already favorited, it will be removed from favorites;
 // if not, it will be added to favorites.
 propertiesRouter.patch(
   "/:id/toggle-favorite",
@@ -162,7 +162,7 @@ propertiesRouter.patch(
       if (!property) throw Errors.notFound("Property");
       const propertyId = property.id;
 
-      // Create a composite key for the favorite relationship using userId and propertyId 
+      // Create a composite key for the favorite relationship using userId and propertyId
       // to identify the unique favorite entry for this user and property combination.
       const key = { userId_propertyId: { userId, propertyId } };
 
@@ -184,12 +184,11 @@ propertiesRouter.patch(
   },
 );
 
-
 propertiesRouter.get("/:id", async (req, res, next) => {
   try {
     const property = await prisma.property.findUnique({
       where: { id: req.params.id },
-include: {
+      include: {
         roomTypes: {
           where: { isAvailable: true },
           include: { rooms: true },
@@ -205,7 +204,7 @@ include: {
   }
 });
 
-//make sure whatever is sent in the request body matches the schema defined in createPropertySchema. 
+//make sure whatever is sent in the request body matches the schema defined in createPropertySchema.
 // If it does, it will be added to the PROPERTIES array and returned in the response. If not, an error will be thrown.
 propertiesRouter.post(
   "/",
@@ -290,7 +289,6 @@ propertiesRouter.get("/:id/room-types/:roomTypeId", async (req, res, next) => {
   }
 });
 
-
 // const ROOMS = [
 //     { id: 'r1', propertyId: 'prop-001', name: 'Room A', price: 20000, seatsTotal: 2, seatsFree: 1, hasAC: true },
 //     { id: 'r2', propertyId: 'prop-001', name: 'Room B', price: 22000, seatsTotal: 2, seatsFree: 2, hasAC: true },
@@ -327,4 +325,3 @@ propertiesRouter.get("/:id/room-types/:roomTypeId", async (req, res, next) => {
 // propertiesRouter.post('/:propertyId/room-types', validateBody(roomTypeSchema), (req, res) => {
 //     res.status(201).json(req.body);
 // })
-

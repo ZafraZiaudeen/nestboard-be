@@ -25,13 +25,16 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     });
     return;
   }
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === '40001') {
+  if (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === "40001"
+  ) {
     res.status(409).json({
       error: {
         code: "CONFLICT",
         message: "Concurrent update detected",
-      }
-    })
+      },
+    });
     return;
   }
   // Unknown errors (not Zod or App errors)

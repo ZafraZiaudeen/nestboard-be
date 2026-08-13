@@ -23,12 +23,12 @@ export async function createBookingPending(
   db: PrismaClient = defaultPrisma,
 ) {
   const { start, end } = leaseRange(input.startMonth, input.durationMonths);
-//transaction is what helps to ensure that the booking creation process is atomic and consistent. 
-// It allows us to perform multiple database operations as a single unit of work, ensuring that either all operations succeed or none do. 
-// This is particularly important in scenarios where we need to check for conflicts, update existing records, and create new bookings without leaving the database in an inconsistent state.
-//For example let's say two users are trying to book the same seat at the same time. Without a transaction, both users could potentially pass the conflict check and create bookings for the same seat, leading to overbooking. 
-// By using a transaction, we ensure that once one user's booking is being processed, the other user's booking will wait until the first transaction is complete, thus preventing conflicts and maintaining data integrity.
-   return db.$transaction(
+  //transaction is what helps to ensure that the booking creation process is atomic and consistent.
+  // It allows us to perform multiple database operations as a single unit of work, ensuring that either all operations succeed or none do.
+  // This is particularly important in scenarios where we need to check for conflicts, update existing records, and create new bookings without leaving the database in an inconsistent state.
+  //For example let's say two users are trying to book the same seat at the same time. Without a transaction, both users could potentially pass the conflict check and create bookings for the same seat, leading to overbooking.
+  // By using a transaction, we ensure that once one user's booking is being processed, the other user's booking will wait until the first transaction is complete, thus preventing conflicts and maintaining data integrity.
+  return db.$transaction(
     async (tx) => {
       const room = await tx.room.findUnique({
         where: { id: input.roomId },
@@ -72,7 +72,7 @@ export async function createBookingPending(
         }
       }
 
-       const totalAmount = room.roomType.pricePerMonth.mul(input.durationMonths);
+      const totalAmount = room.roomType.pricePerMonth.mul(input.durationMonths);
 
       return tx.booking.create({
         data: {
@@ -91,12 +91,12 @@ export async function createBookingPending(
             include: {
               roomType: {
                 include: {
-                  property: true
-                }
-              }
-            }
-          }
-        }
+                  property: true,
+                },
+              },
+            },
+          },
+        },
       });
     },
     {
