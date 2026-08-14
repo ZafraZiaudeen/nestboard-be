@@ -50,6 +50,7 @@ export type BookingMinAggregateOutputType = {
   paymentStatus: $Enums.PaymentStatus | null;
   bookingStatus: $Enums.BookingStatus | null;
   createdAt: Date | null;
+  stripeSessionId: string | null;
 };
 
 export type BookingMaxAggregateOutputType = {
@@ -64,6 +65,7 @@ export type BookingMaxAggregateOutputType = {
   paymentStatus: $Enums.PaymentStatus | null;
   bookingStatus: $Enums.BookingStatus | null;
   createdAt: Date | null;
+  stripeSessionId: string | null;
 };
 
 export type BookingCountAggregateOutputType = {
@@ -78,6 +80,7 @@ export type BookingCountAggregateOutputType = {
   paymentStatus: number;
   bookingStatus: number;
   createdAt: number;
+  stripeSessionId: number;
   _all: number;
 };
 
@@ -105,6 +108,7 @@ export type BookingMinAggregateInputType = {
   paymentStatus?: true;
   bookingStatus?: true;
   createdAt?: true;
+  stripeSessionId?: true;
 };
 
 export type BookingMaxAggregateInputType = {
@@ -119,6 +123,7 @@ export type BookingMaxAggregateInputType = {
   paymentStatus?: true;
   bookingStatus?: true;
   createdAt?: true;
+  stripeSessionId?: true;
 };
 
 export type BookingCountAggregateInputType = {
@@ -133,6 +138,7 @@ export type BookingCountAggregateInputType = {
   paymentStatus?: true;
   bookingStatus?: true;
   createdAt?: true;
+  stripeSessionId?: true;
   _all?: true;
 };
 
@@ -241,6 +247,7 @@ export type BookingGroupByOutputType = {
   paymentStatus: $Enums.PaymentStatus;
   bookingStatus: $Enums.BookingStatus;
   createdAt: Date;
+  stripeSessionId: string | null;
   _count: BookingCountAggregateOutputType | null;
   _avg: BookingAvgAggregateOutputType | null;
   _sum: BookingSumAggregateOutputType | null;
@@ -283,6 +290,7 @@ export type BookingWhereInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFilter<"Booking"> | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFilter<"Booking"> | Date | string;
+  stripeSessionId?: Prisma.StringNullableFilter<"Booking"> | string | null;
   tenant?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>;
   room?: Prisma.XOR<Prisma.RoomScalarRelationFilter, Prisma.RoomWhereInput>;
 };
@@ -299,6 +307,7 @@ export type BookingOrderByWithRelationInput = {
   paymentStatus?: Prisma.SortOrder;
   bookingStatus?: Prisma.SortOrder;
   createdAt?: Prisma.SortOrder;
+  stripeSessionId?: Prisma.SortOrderInput | Prisma.SortOrder;
   tenant?: Prisma.UserOrderByWithRelationInput;
   room?: Prisma.RoomOrderByWithRelationInput;
 };
@@ -306,6 +315,7 @@ export type BookingOrderByWithRelationInput = {
 export type BookingWhereUniqueInput = Prisma.AtLeast<
   {
     id?: string;
+    stripeSessionId?: string;
     AND?: Prisma.BookingWhereInput | Prisma.BookingWhereInput[];
     OR?: Prisma.BookingWhereInput[];
     NOT?: Prisma.BookingWhereInput | Prisma.BookingWhereInput[];
@@ -329,7 +339,7 @@ export type BookingWhereUniqueInput = Prisma.AtLeast<
     tenant?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>;
     room?: Prisma.XOR<Prisma.RoomScalarRelationFilter, Prisma.RoomWhereInput>;
   },
-  "id"
+  "id" | "stripeSessionId"
 >;
 
 export type BookingOrderByWithAggregationInput = {
@@ -344,6 +354,7 @@ export type BookingOrderByWithAggregationInput = {
   paymentStatus?: Prisma.SortOrder;
   bookingStatus?: Prisma.SortOrder;
   createdAt?: Prisma.SortOrder;
+  stripeSessionId?: Prisma.SortOrderInput | Prisma.SortOrder;
   _count?: Prisma.BookingCountOrderByAggregateInput;
   _avg?: Prisma.BookingAvgOrderByAggregateInput;
   _max?: Prisma.BookingMaxOrderByAggregateInput;
@@ -379,6 +390,8 @@ export type BookingScalarWhereWithAggregatesInput = {
     | Prisma.EnumBookingStatusWithAggregatesFilter<"Booking">
     | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Booking"> | Date | string;
+  stripeSessionId?:
+    Prisma.StringNullableWithAggregatesFilter<"Booking"> | string | null;
 };
 
 export type BookingCreateInput = {
@@ -391,6 +404,7 @@ export type BookingCreateInput = {
   paymentStatus?: $Enums.PaymentStatus;
   bookingStatus?: $Enums.BookingStatus;
   createdAt?: Date | string;
+  stripeSessionId?: string | null;
   tenant: Prisma.UserCreateNestedOneWithoutBookingsInput;
   room: Prisma.RoomCreateNestedOneWithoutBookingsInput;
 };
@@ -407,6 +421,7 @@ export type BookingUncheckedCreateInput = {
   paymentStatus?: $Enums.PaymentStatus;
   bookingStatus?: $Enums.BookingStatus;
   createdAt?: Date | string;
+  stripeSessionId?: string | null;
 };
 
 export type BookingUpdateInput = {
@@ -426,6 +441,8 @@ export type BookingUpdateInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
   tenant?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput;
   room?: Prisma.RoomUpdateOneRequiredWithoutBookingsNestedInput;
 };
@@ -449,6 +466,8 @@ export type BookingUncheckedUpdateInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
 };
 
 export type BookingCreateManyInput = {
@@ -463,6 +482,7 @@ export type BookingCreateManyInput = {
   paymentStatus?: $Enums.PaymentStatus;
   bookingStatus?: $Enums.BookingStatus;
   createdAt?: Date | string;
+  stripeSessionId?: string | null;
 };
 
 export type BookingUpdateManyMutationInput = {
@@ -482,6 +502,8 @@ export type BookingUpdateManyMutationInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
 };
 
 export type BookingUncheckedUpdateManyInput = {
@@ -503,6 +525,8 @@ export type BookingUncheckedUpdateManyInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
 };
 
 export type BookingListRelationFilter = {
@@ -527,6 +551,7 @@ export type BookingCountOrderByAggregateInput = {
   paymentStatus?: Prisma.SortOrder;
   bookingStatus?: Prisma.SortOrder;
   createdAt?: Prisma.SortOrder;
+  stripeSessionId?: Prisma.SortOrder;
 };
 
 export type BookingAvgOrderByAggregateInput = {
@@ -547,6 +572,7 @@ export type BookingMaxOrderByAggregateInput = {
   paymentStatus?: Prisma.SortOrder;
   bookingStatus?: Prisma.SortOrder;
   createdAt?: Prisma.SortOrder;
+  stripeSessionId?: Prisma.SortOrder;
 };
 
 export type BookingMinOrderByAggregateInput = {
@@ -561,6 +587,7 @@ export type BookingMinOrderByAggregateInput = {
   paymentStatus?: Prisma.SortOrder;
   bookingStatus?: Prisma.SortOrder;
   createdAt?: Prisma.SortOrder;
+  stripeSessionId?: Prisma.SortOrder;
 };
 
 export type BookingSumOrderByAggregateInput = {
@@ -767,6 +794,7 @@ export type BookingCreateWithoutTenantInput = {
   paymentStatus?: $Enums.PaymentStatus;
   bookingStatus?: $Enums.BookingStatus;
   createdAt?: Date | string;
+  stripeSessionId?: string | null;
   room: Prisma.RoomCreateNestedOneWithoutBookingsInput;
 };
 
@@ -781,6 +809,7 @@ export type BookingUncheckedCreateWithoutTenantInput = {
   paymentStatus?: $Enums.PaymentStatus;
   bookingStatus?: $Enums.BookingStatus;
   createdAt?: Date | string;
+  stripeSessionId?: string | null;
 };
 
 export type BookingCreateOrConnectWithoutTenantInput = {
@@ -847,6 +876,7 @@ export type BookingScalarWhereInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFilter<"Booking"> | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFilter<"Booking"> | Date | string;
+  stripeSessionId?: Prisma.StringNullableFilter<"Booking"> | string | null;
 };
 
 export type BookingCreateWithoutRoomInput = {
@@ -859,6 +889,7 @@ export type BookingCreateWithoutRoomInput = {
   paymentStatus?: $Enums.PaymentStatus;
   bookingStatus?: $Enums.BookingStatus;
   createdAt?: Date | string;
+  stripeSessionId?: string | null;
   tenant: Prisma.UserCreateNestedOneWithoutBookingsInput;
 };
 
@@ -873,6 +904,7 @@ export type BookingUncheckedCreateWithoutRoomInput = {
   paymentStatus?: $Enums.PaymentStatus;
   bookingStatus?: $Enums.BookingStatus;
   createdAt?: Date | string;
+  stripeSessionId?: string | null;
 };
 
 export type BookingCreateOrConnectWithoutRoomInput = {
@@ -927,6 +959,7 @@ export type BookingCreateManyTenantInput = {
   paymentStatus?: $Enums.PaymentStatus;
   bookingStatus?: $Enums.BookingStatus;
   createdAt?: Date | string;
+  stripeSessionId?: string | null;
 };
 
 export type BookingUpdateWithoutTenantInput = {
@@ -946,6 +979,8 @@ export type BookingUpdateWithoutTenantInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
   room?: Prisma.RoomUpdateOneRequiredWithoutBookingsNestedInput;
 };
 
@@ -967,6 +1002,8 @@ export type BookingUncheckedUpdateWithoutTenantInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
 };
 
 export type BookingUncheckedUpdateManyWithoutTenantInput = {
@@ -987,6 +1024,8 @@ export type BookingUncheckedUpdateManyWithoutTenantInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
 };
 
 export type BookingCreateManyRoomInput = {
@@ -1000,6 +1039,7 @@ export type BookingCreateManyRoomInput = {
   paymentStatus?: $Enums.PaymentStatus;
   bookingStatus?: $Enums.BookingStatus;
   createdAt?: Date | string;
+  stripeSessionId?: string | null;
 };
 
 export type BookingUpdateWithoutRoomInput = {
@@ -1019,6 +1059,8 @@ export type BookingUpdateWithoutRoomInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
   tenant?: Prisma.UserUpdateOneRequiredWithoutBookingsNestedInput;
 };
 
@@ -1040,6 +1082,8 @@ export type BookingUncheckedUpdateWithoutRoomInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
 };
 
 export type BookingUncheckedUpdateManyWithoutRoomInput = {
@@ -1060,6 +1104,8 @@ export type BookingUncheckedUpdateManyWithoutRoomInput = {
   bookingStatus?:
     Prisma.EnumBookingStatusFieldUpdateOperationsInput | $Enums.BookingStatus;
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string;
+  stripeSessionId?:
+    Prisma.NullableStringFieldUpdateOperationsInput | string | null;
 };
 
 export type BookingSelect<
@@ -1078,6 +1124,7 @@ export type BookingSelect<
     paymentStatus?: boolean;
     bookingStatus?: boolean;
     createdAt?: boolean;
+    stripeSessionId?: boolean;
     tenant?: boolean | Prisma.UserDefaultArgs<ExtArgs>;
     room?: boolean | Prisma.RoomDefaultArgs<ExtArgs>;
   },
@@ -1100,6 +1147,7 @@ export type BookingSelectCreateManyAndReturn<
     paymentStatus?: boolean;
     bookingStatus?: boolean;
     createdAt?: boolean;
+    stripeSessionId?: boolean;
     tenant?: boolean | Prisma.UserDefaultArgs<ExtArgs>;
     room?: boolean | Prisma.RoomDefaultArgs<ExtArgs>;
   },
@@ -1122,6 +1170,7 @@ export type BookingSelectUpdateManyAndReturn<
     paymentStatus?: boolean;
     bookingStatus?: boolean;
     createdAt?: boolean;
+    stripeSessionId?: boolean;
     tenant?: boolean | Prisma.UserDefaultArgs<ExtArgs>;
     room?: boolean | Prisma.RoomDefaultArgs<ExtArgs>;
   },
@@ -1140,6 +1189,7 @@ export type BookingSelectScalar = {
   paymentStatus?: boolean;
   bookingStatus?: boolean;
   createdAt?: boolean;
+  stripeSessionId?: boolean;
 };
 
 export type BookingOmit<
@@ -1156,7 +1206,8 @@ export type BookingOmit<
   | "totalAmount"
   | "paymentStatus"
   | "bookingStatus"
-  | "createdAt",
+  | "createdAt"
+  | "stripeSessionId",
   ExtArgs["result"]["booking"]
 >;
 export type BookingInclude<
@@ -1203,6 +1254,7 @@ export type $BookingPayload<
       paymentStatus: $Enums.PaymentStatus;
       bookingStatus: $Enums.BookingStatus;
       createdAt: Date;
+      stripeSessionId: string | null;
     },
     ExtArgs["result"]["booking"]
   >;
@@ -1828,6 +1880,7 @@ export interface BookingFieldRefs {
   readonly paymentStatus: Prisma.FieldRef<"Booking", "PaymentStatus">;
   readonly bookingStatus: Prisma.FieldRef<"Booking", "BookingStatus">;
   readonly createdAt: Prisma.FieldRef<"Booking", "DateTime">;
+  readonly stripeSessionId: Prisma.FieldRef<"Booking", "String">;
 }
 
 // Custom InputTypes

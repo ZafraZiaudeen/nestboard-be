@@ -124,17 +124,18 @@ model Room {
 }
 
 model Booking {
-  id             String        @id @default(uuid()) @db.Uuid
-  tenantId       String        @map("tenant_id") @db.Uuid
-  roomId         String        @map("room_id") @db.Uuid
-  seatNumber     Int           @map("seat_number")
-  leaseStart     DateTime      @map("lease_start") @db.Date
-  leaseEnd       DateTime      @map("lease_end") @db.Date
-  durationMonths Int           @map("duration_months")
-  totalAmount    Decimal       @map("total_amount") @db.Decimal(10, 2)
-  paymentStatus  PaymentStatus @default(PENDING) @map("payment_status")
-  bookingStatus  BookingStatus @default(PENDING) @map("booking_status")
-  createdAt      DateTime      @default(now()) @map("created_at")
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  roomId          String        @map("room_id") @db.Uuid
+  seatNumber      Int           @map("seat_number")
+  leaseStart      DateTime      @map("lease_start") @db.Date
+  leaseEnd        DateTime      @map("lease_end") @db.Date
+  durationMonths  Int           @map("duration_months")
+  totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
+  bookingStatus   BookingStatus @default(PENDING) @map("booking_status")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  stripeSessionId String?       @unique @map("stripe_session_id")
 
   tenant User @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   room   Room @relation(fields: [roomId], references: [id], onDelete: Restrict)

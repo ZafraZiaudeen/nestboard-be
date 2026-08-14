@@ -12,6 +12,11 @@ const envSchema = z.object({
   UPLOAD_LOCAL_DIR: z.string().default("./uploads"),
   RATE_LIMIT: z.coerce.number().int().positive().default(100),
   GOOGLE_CLIENT_ID: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().startsWith("sk_test_"),
+  STRIPE_WEBHOOK_SECRET: z.string().startsWith("whsec_"),
+  STRIPE_SUCCESS_URL: z.url().default("http://localhost:5173/bookings/success"),
+  STRIPE_CANCEL_URL: z.url().default("http://localhost:5173/bookings/cancel"),
+  STRIPE_CURRENCY: z.string().length(3).default("lkr"),
 });
 
 const parsed = envSchema.safeParse(process.env);

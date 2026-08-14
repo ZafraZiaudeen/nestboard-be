@@ -15,11 +15,11 @@ export const create: RequestHandler = async (req, res, next) => {
 
 export const confirm: RequestHandler = async (req, res, next) => {
   try {
-    const booking = await svc.confirmBooking(
+    const sessionUrl = await svc.startBookingCheckout(
       String(req.params.id!),
       req.user!.id,
     );
-    res.json(booking);
+    res.json({ url: sessionUrl });
   } catch (err) {
     next(err);
   }

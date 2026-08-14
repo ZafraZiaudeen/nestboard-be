@@ -12,6 +12,7 @@ import { bookingsRouter } from "./routes/bookings.js";
 import { uploadsRouter } from "./routes/uploads.js";
 import path from "node:path";
 import { rateLimit } from "express-rate-limit";
+import { stripeWebhookRouter } from "./routes/stripe-webhook.js";
 
 export function buildApp(): Express {
   const app = express();
@@ -20,6 +21,11 @@ export function buildApp(): Express {
 
   app.use(helmet());
   app.use(cors({ origin: corsOrigins, credentials: false }));
+  app.use(
+    "/webhooks/stripe",
+    express.raw({ type: "application/json" }),
+    stripeWebhookRouter,
+  );
   app.use(express.json({ limit: "1mb" }));
 
   const apiLimiter = rateLimit({

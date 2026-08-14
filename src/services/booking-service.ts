@@ -3,6 +3,9 @@ import { BookingStatus, PaymentStatus } from "../generated/enums.js";
 import { prisma as defaultPrisma } from "../lib/prisma.js";
 import { Errors } from "../lib/errors.js";
 import type { CreateBookingInput } from "../schemas/booking.js";
+import { env } from "../lib/env.js";
+import { logger } from "../lib/logger.js";
+import { stripe } from "../lib/stripe.js";
 
 const TEN_MIN_MS = 10 * 60 * 1000;
 
@@ -105,22 +108,22 @@ export async function createBookingPending(
   );
 }
 
-export async function confirmBooking(
+export async function startBookingCheckout(
   bookingId: string,
   tenantId: string,
   db: PrismaClient = defaultPrisma,
 ) {
-  return db.$transaction(
+  const booking = await db.$transaction(
     async (tx) => {
-      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
-      if (!booking) throw Errors.notFound("Booking");
-      if (booking.tenantId !== tenantId) throw Errors.forbidden("Booking");
-      if (booking.bookingStatus !== BookingStatus.PENDING) {
-        throw Errors.conflict(`Booking is already ${booking.bookingStatus}`);
+      const b = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!b) throw Errors.notFound("Booking");
+      if (b.tenantId !== tenantId) throw Errors.forbidden("Booking");
+      if (b.bookingStatus !== BookingStatus.PENDING) {
+        throw Errors.conflict(`Booking is already ${b.bookingStatus}`);
       }
-      if (Date.now() - booking.createdAt.getTime() > TEN_MIN_MS) {
+      if (Date.now() - b.createdAt.getTime() > TEN_MIN_MS) {
         await tx.booking.update({
-          where: { id: booking.id },
+          where: { id: b.id },
           data: {
             bookingStatus: BookingStatus.EXPIRED,
             paymentStatus: PaymentStatus.FAILED,
@@ -128,6 +131,73 @@ export async function confirmBooking(
         });
         throw Errors.conflict("Booking expired before payment");
       }
+      return b;
+    },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    },
+  );
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: [
+      {
+        price_data: {
+          currency: env.STRIPE_CURRENCY,
+          unit_amount: Math.round(booking.totalAmount.toNumber() * 100),
+          product_data: { name: `Booking ${booking.id}` },
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: env.STRIPE_SUCCESS_URL,
+    cancel_url: env.STRIPE_CANCEL_URL,
+    client_reference_id: booking.id,
+    metadata: { bookingId: booking.id },
+  });
+
+  await db.booking.update({
+    where: { id: bookingId },
+    data: { stripeSessionId: session.id },
+  });
+
+  return { url: session.url };
+}
+
+export async function listMyBookings(
+  tenantId: string,
+  db: PrismaClient = defaultPrisma,
+) {
+  return db.booking.findMany({
+    where: { tenantId },
+    orderBy: { createdAt: "desc" },
+    include: {
+      room: { include: { roomType: { include: { property: true } } } },
+    },
+  });
+}
+
+export async function confirmBookingFromWebhook(
+  bookingId: string,
+  stripeSessionId: string,
+  db = defaultPrisma,
+) {
+  return db.$transaction(
+    async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!booking) return;
+
+      if (booking.stripeSessionId != stripeSessionId) {
+        logger.warn(
+          `Unexpected session ${stripeSessionId}, expected ${booking.stripeSessionId}`,
+        );
+      }
+
+      if (booking.bookingStatus !== BookingStatus.PENDING) {
+        logger.warn(`Booking ${bookingId} paid already, reconcile manually`);
+        return;
+      }
+
       return tx.booking.update({
         where: { id: bookingId },
         data: {
@@ -142,15 +212,24 @@ export async function confirmBooking(
   );
 }
 
-export async function listMyBookings(
-  tenantId: string,
-  db: PrismaClient = defaultPrisma,
+export async function expireBookingFromWebhook(
+  bookingId: string,
+  db = defaultPrisma,
 ) {
-  return db.booking.findMany({
-    where: { tenantId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      room: { include: { roomType: { include: { property: true } } } },
+  return db.$transaction(
+    async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!booking || booking.bookingStatus != BookingStatus.PENDING) return;
+      return tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          paymentStatus: PaymentStatus.FAILED,
+          bookingStatus: BookingStatus.EXPIRED,
+        },
+      });
     },
-  });
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    },
+  );
 }
