@@ -12,7 +12,11 @@ import {
   type CreatePropertyInput,
 } from "../schemas/property.js";
 import { Errors } from "../lib/errors.js";
-import { createRoomSchema, createRoomTypeSchema,type CreateRoomInput } from "../schemas/room.js";
+import {
+  createRoomSchema,
+  createRoomTypeSchema,
+  type CreateRoomInput,
+} from "../schemas/room.js";
 import { requireRole, verifyJwt } from "../middleware/auth.js";
 import { Role } from "../generated/enums.js";
 
