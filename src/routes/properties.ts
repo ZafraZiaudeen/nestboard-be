@@ -12,7 +12,7 @@ import {
   type CreatePropertyInput,
 } from "../schemas/property.js";
 import { Errors } from "../lib/errors.js";
-import { createRoomSchema, type CreateRoomInput } from "../schemas/room.js";
+import { createRoomSchema, createRoomTypeSchema,type CreateRoomInput } from "../schemas/room.js";
 import { requireRole, verifyJwt } from "../middleware/auth.js";
 import { Role } from "../generated/enums.js";
 
@@ -288,6 +288,107 @@ propertiesRouter.get("/:id/room-types/:roomTypeId", async (req, res, next) => {
     next(err);
   }
 });
+
+propertiesRouter.post(
+  "/:id/room-types",
+  verifyJwt,
+  requireRole(Role.ADMIN),
+  validateBody(createRoomTypeSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) throw Errors.unauthenticated();
+      const property = await prisma.property.findFirst({
+        where: { id: req.params.id as string, vendorId: userId },
+      });
+      if (!property) throw Errors.notFound("Property");
+      const roomType = await prisma.roomType.create({
+        data: {
+          ...req.body,
+          propertyId: property.id,
+        },
+      });
+      res.status(201).json(roomType);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+propertiesRouter.delete(
+  "/:id/room-types/:roomTypeId",
+  verifyJwt,
+  requireRole(Role.ADMIN),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) throw Errors.unauthenticated();
+      const roomType = await prisma.roomType.findFirst({
+        where: {
+          id: req.params.roomTypeId as string,
+          propertyId: req.params.id as string,
+          property: { vendorId: userId },
+        },
+      });
+      if (!roomType) throw Errors.notFound("RoomType");
+      await prisma.roomType.delete({ where: { id: roomType.id } });
+      res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+propertiesRouter.post(
+  "/:id/room-types/:roomTypeId/rooms",
+  verifyJwt,
+  requireRole(Role.ADMIN),
+  validateBody(createRoomSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) throw Errors.unauthenticated();
+      const roomType = await prisma.roomType.findFirst({
+        where: {
+          id: req.params.roomTypeId as string,
+          propertyId: req.params.id as string,
+          property: { vendorId: userId },
+        },
+      });
+      if (!roomType) throw Errors.notFound("RoomType");
+      const room = await prisma.room.create({
+        data: { ...req.body, roomTypeId: roomType.id },
+      });
+      res.status(201).json(room);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+propertiesRouter.delete(
+  "/:id/room-types/:roomTypeId/rooms/:roomId",
+  verifyJwt,
+  requireRole(Role.ADMIN),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) throw Errors.unauthenticated();
+      const roomType = await prisma.roomType.findFirst({
+        where: {
+          id: req.params.roomTypeId as string,
+          propertyId: req.params.id as string,
+          property: { vendorId: userId },
+        },
+      });
+      if (!roomType) throw Errors.notFound("RoomType");
+      await prisma.room.delete({ where: { id: req.params.roomId as string } });
+      res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // const ROOMS = [
 //     { id: 'r1', propertyId: 'prop-001', name: 'Room A', price: 20000, seatsTotal: 2, seatsFree: 1, hasAC: true },

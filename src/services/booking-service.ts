@@ -161,7 +161,7 @@ export async function startBookingCheckout(
     data: { stripeSessionId: session.id },
   });
 
-  return { url: session.url };
+  return session.url;
 }
 
 export async function listMyBookings(
