@@ -7,7 +7,7 @@ export const createBookingSchema = z
     roomId: z.uuid(),
     seatNumber: z.number().int().min(1).max(20),
     startMonth: monthIso,
-    durationMonths: z.union([z.literal(3), z.literal(6)]),
+    durationMonths: z.number().int().min(1).max(24),
   })
   .strict();
 

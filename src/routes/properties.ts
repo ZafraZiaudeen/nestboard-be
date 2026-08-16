@@ -9,16 +9,19 @@ import {
 import { validateBody } from "../middleware/validate.js";
 import {
   createPropertySchema,
+  updatePropertySchema,
   type CreatePropertyInput,
 } from "../schemas/property.js";
 import { Errors } from "../lib/errors.js";
 import {
   createRoomSchema,
   createRoomTypeSchema,
+  updateRoomTypeSchema,
   type CreateRoomInput,
 } from "../schemas/room.js";
 import { requireRole, verifyJwt } from "../middleware/auth.js";
-import { Role } from "../generated/enums.js";
+import { BookingStatus, Role } from "../generated/enums.js";
+import { BOOKING_EXPIRY_MS } from "../lib/constants.js";
 
 export const propertiesRouter: Router = Router();
 
@@ -188,6 +191,31 @@ propertiesRouter.patch(
   },
 );
 
+// Returns a Prisma include that counts only bookings that currently block a seat:
+//   - CONFIRMED bookings (always block)
+//   - PENDING bookings still inside the 3-day payment window
+// Called as a function so the cutoff date is fresh on every request.
+function activeBookingsInclude() {
+  const paymentWindowCutoff = new Date(Date.now() - BOOKING_EXPIRY_MS);
+  return {
+    bookings: {
+      where: {
+        OR: [
+          { bookingStatus: BookingStatus.CONFIRMED },
+          {
+            bookingStatus: BookingStatus.PENDING,
+            createdAt: { gte: paymentWindowCutoff },
+          },
+        ],
+      },
+      select: {
+        seatNumber: true,
+        tenant: { select: { displayName: true } },
+      },
+    },
+  };
+}
+
 propertiesRouter.get("/:id", async (req, res, next) => {
   try {
     const property = await prisma.property.findUnique({
@@ -195,7 +223,7 @@ propertiesRouter.get("/:id", async (req, res, next) => {
       include: {
         roomTypes: {
           where: { isAvailable: true },
-          include: { rooms: true },
+          include: { rooms: { include: activeBookingsInclude() } },
           orderBy: { createdAt: "asc" },
         },
       },
@@ -238,12 +266,32 @@ propertiesRouter.delete(
   requireRole(Role.ADMIN),
   async (req, res, next) => {
     try {
+      const userId = req.user?.id;
+      if (!userId) throw Errors.unauthenticated();
       await prisma.property.delete({
-        where: {
-          id: String(req.params.id),
-        },
+        where: { id: String(req.params.id), vendorId: userId },
       });
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+propertiesRouter.patch(
+  "/:id",
+  verifyJwt,
+  requireRole(Role.ADMIN),
+  validateBody(updatePropertySchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) throw Errors.unauthenticated();
+      const updated = await prisma.property.update({
+        where: { id: String(req.params.id), vendorId: userId },
+        data: req.body,
+      });
+      res.json(updated);
     } catch (err) {
       next(err);
     }
@@ -257,7 +305,7 @@ propertiesRouter.get("/:id/room-types", async (req, res, next) => {
       include: {
         roomTypes: {
           where: { isAvailable: true },
-          include: { rooms: true },
+          include: { rooms: { include: activeBookingsInclude() } },
           orderBy: { createdAt: "asc" },
         },
       },
@@ -280,6 +328,7 @@ propertiesRouter.get("/:id/room-types/:roomTypeId", async (req, res, next) => {
       },
       include: {
         rooms: {
+          include: activeBookingsInclude(),
           orderBy: { roomLabel: "asc" },
         },
       },
@@ -337,6 +386,34 @@ propertiesRouter.delete(
       if (!roomType) throw Errors.notFound("RoomType");
       await prisma.roomType.delete({ where: { id: roomType.id } });
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+propertiesRouter.patch(
+  "/:id/room-types/:roomTypeId",
+  verifyJwt,
+  requireRole(Role.ADMIN),
+  validateBody(updateRoomTypeSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) throw Errors.unauthenticated();
+      const roomType = await prisma.roomType.findFirst({
+        where: {
+          id: req.params.roomTypeId as string,
+          propertyId: req.params.id as string,
+          property: { vendorId: userId },
+        },
+      });
+      if (!roomType) throw Errors.notFound("RoomType");
+      const updated = await prisma.roomType.update({
+        where: { id: roomType.id },
+        data: req.body,
+      });
+      res.json(updated);
     } catch (err) {
       next(err);
     }

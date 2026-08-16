@@ -11,10 +11,15 @@ export type PropertyDTO = {
   title: string;
   description: string;
   location: string;
+  address: string;
+  city: string;
+  latitude: number;
+  longitude: number;
   type: "House" | "Villa" | "Apartment" | "Hotel";
   price: string;
   rating: number;
   image: string;
+  amenities: string[];
 };
 
 const TYPE_LABEL: Record<PropertyType, PropertyDTO["type"]> = {
@@ -44,17 +49,26 @@ export function toPropertyDTO(
     title: p.title,
     description: p.description,
     location: `${p.address}, ${p.city}`,
+    address: p.address,
+    city: p.city,
+    latitude: p.latitude,
+    longitude: p.longitude,
     type: TYPE_LABEL[p.type],
     price: minPrice !== null ? compactKilo(minPrice) : "-",
     rating: Number(p.rating.toString()),
     image: p.imageUrl,
+    amenities: p.amenities,
   };
 }
 
 export type PropertyDetailDTO = {
   id: string;
   title: string;
+  description: string;
   address: string;
+  city: string;
+  latitude: number;
+  longitude: number;
   amenities: string[];
   rating: number;
   seatsAvailable: number;
@@ -64,19 +78,29 @@ export type PropertyDetailDTO = {
   roomTypes: RoomTypeDTO[];
 };
 
+export type SeatDTO = {
+  seatNumber: number;
+  isOccupied: boolean;
+  tenantInitials: string | null;
+};
+
 export type RoomDTO = {
   id: string;
   roomLabel: string;
   isAvailable: boolean;
+  seats: SeatDTO[];
 };
 
 export type RoomTypeDTO = {
   id: string;
   name: string;
   price: string;
+  pricePerMonthRaw: number;
+  seatCapacity: number;
   seatsTotal: number;
   seatsFree: number;
   hasAC: boolean;
+  amenities: string[];
   rooms?: RoomDTO[];
 };
 
@@ -84,24 +108,54 @@ function money(n: number): string {
   return Math.round(n).toLocaleString("en-LK");
 }
 
-type RoomTypeWithRooms = PrismaRoomType & { rooms: PrismaRoom[] };
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+// bookings is optionally injected by routes that need occupancy data
+type RoomWithBookings = PrismaRoom & {
+  bookings?: { seatNumber: number; tenant: { displayName: string } }[];
+};
+type RoomTypeWithRooms = PrismaRoomType & { rooms: RoomWithBookings[] };
 
 export function toRoomTypeDTO(roomType: RoomTypeWithRooms): RoomTypeDTO {
   const rooms = roomType.rooms ?? [];
   const activeRooms = rooms.filter((room) => room.isAvailable);
   const totalSeats = roomType.seatCapacity * activeRooms.length;
 
+  // Each booking record represents one occupied seat in a room.
+  // Subtract confirmed/pending bookings so seatsFree reflects real availability.
+  const occupiedSeats = activeRooms.reduce(
+    (sum, room) => sum + (room.bookings?.length ?? 0),
+    0,
+  );
+  const seatsFree = Math.max(0, totalSeats - occupiedSeats);
+
   return {
     id: roomType.id,
     name: roomType.name,
     price: money(Number(roomType.pricePerMonth.toString())),
+    pricePerMonthRaw: Number(roomType.pricePerMonth.toString()),
+    seatCapacity: roomType.seatCapacity,
     seatsTotal: totalSeats,
-    seatsFree: totalSeats,
+    seatsFree,
     hasAC: roomType.hasAC,
+    amenities: roomType.amenities,
     rooms: activeRooms.map((room) => ({
       id: room.id,
       roomLabel: room.roomLabel,
       isAvailable: room.isAvailable,
+      seats: Array.from({ length: roomType.seatCapacity }, (_, i) => {
+        const seatNum = i + 1;
+        const booking = room.bookings?.find((b) => b.seatNumber === seatNum);
+        return {
+          seatNumber: seatNum,
+          isOccupied: !!booking,
+          tenantInitials: booking ? getInitials(booking.tenant.displayName) : null,
+        };
+      }),
     })),
   };
 }
@@ -111,6 +165,7 @@ export function toRoomDTO(room: PrismaRoom): RoomDTO {
     id: room.id,
     roomLabel: room.roomLabel,
     isAvailable: room.isAvailable,
+    seats: [],
   };
 }
 
@@ -131,7 +186,11 @@ export function toPropertyDetailDTO(
   return {
     id: p.id,
     title: p.title,
+    description: p.description,
     address: `${p.address}, ${p.city}`,
+    city: p.city,
+    latitude: p.latitude,
+    longitude: p.longitude,
     amenities: [TYPE_LABEL[p.type], ...p.amenities],
     rating: Number(p.rating.toString()),
     seatsAvailable,
@@ -145,6 +204,9 @@ export function toPropertyDetailDTO(
 type RoomTypeWithProperty = PrismaRoomType & { property: PrismaProperty };
 type RoomWithRoomType = PrismaRoom & { roomType: RoomTypeWithProperty };
 type BookingWithDetails = PrismaBooking & { room: RoomWithRoomType };
+type AdminBookingWithDetails = BookingWithDetails & {
+  tenant: { id: string; email: string; displayName: string };
+};
 
 export function toBookingDTO(booking: BookingWithDetails) {
   return {
@@ -156,6 +218,7 @@ export function toBookingDTO(booking: BookingWithDetails) {
     leaseEnd: booking.leaseEnd.toISOString().slice(0, 10),
     durationMonths: booking.durationMonths,
     totalAmount: booking.totalAmount.toString(),
+    createdAt: booking.createdAt.toISOString(),
     property: {
       id: booking.room.roomType.property.id,
       title: booking.room.roomType.property.title,
@@ -170,5 +233,13 @@ export function toBookingDTO(booking: BookingWithDetails) {
       id: booking.room.id,
       roomLabel: booking.room.roomLabel,
     },
+  };
+}
+
+export function toAdminBookingDTO(booking: AdminBookingWithDetails) {
+  return {
+    ...toBookingDTO(booking),
+    tenant: booking.tenant,
+    createdAt: booking.createdAt.toISOString(),
   };
 }

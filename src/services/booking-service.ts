@@ -6,10 +6,10 @@ import type { CreateBookingInput } from "../schemas/booking.js";
 import { env } from "../lib/env.js";
 import { logger } from "../lib/logger.js";
 import { stripe } from "../lib/stripe.js";
+import { toAdminBookingDTO } from "../lib/dto.js";
+import { BOOKING_EXPIRY_MS } from "../lib/constants.js";
 
-const TEN_MIN_MS = 10 * 60 * 1000;
-
-function leaseRange(startMonth: string, durationMonths: 3 | 6) {
+function leaseRange(startMonth: string, durationMonths: number) {
   const [y, m] = startMonth.split("-").map(Number);
   if (!y || !m) throw Errors.validation("Invalid startMonth format");
   const start = new Date(Date.UTC(y, m - 1, 1));
@@ -61,7 +61,7 @@ export async function createBookingPending(
         // If the conflicting booking is in PENDING status and has been created more than 10 minutes ago, we consider it stale and update its status to EXPIRED and payment status to FAILED.
         const isStale =
           conflict.bookingStatus === BookingStatus.PENDING &&
-          Date.now() - conflict.createdAt.getTime() > TEN_MIN_MS;
+          Date.now() - conflict.createdAt.getTime() > BOOKING_EXPIRY_MS;
         if (isStale) {
           await tx.booking.update({
             where: { id: conflict.id },
@@ -121,7 +121,7 @@ export async function startBookingCheckout(
       if (b.bookingStatus !== BookingStatus.PENDING) {
         throw Errors.conflict(`Booking is already ${b.bookingStatus}`);
       }
-      if (Date.now() - b.createdAt.getTime() > TEN_MIN_MS) {
+      if (Date.now() - b.createdAt.getTime() > BOOKING_EXPIRY_MS) {
         await tx.booking.update({
           where: { id: b.id },
           data: {
@@ -131,6 +131,36 @@ export async function startBookingCheckout(
         });
         throw Errors.conflict("Booking expired before payment");
       }
+
+      // Re-check seat availability: a CONFIRMED overlap or another PENDING still within
+      // its payment window both block the checkout.
+      const seatConflict = await tx.booking.findFirst({
+        where: {
+          id: { not: b.id },
+          roomId: b.roomId,
+          seatNumber: b.seatNumber,
+          leaseStart: { lt: b.leaseEnd },
+          leaseEnd: { gt: b.leaseStart },
+          OR: [
+            { bookingStatus: BookingStatus.CONFIRMED },
+            {
+              bookingStatus: BookingStatus.PENDING,
+              createdAt: { gte: new Date(Date.now() - BOOKING_EXPIRY_MS) },
+            },
+          ],
+        },
+      });
+      if (seatConflict) {
+        await tx.booking.update({
+          where: { id: b.id },
+          data: {
+            bookingStatus: BookingStatus.EXPIRED,
+            paymentStatus: PaymentStatus.FAILED,
+          },
+        });
+        throw Errors.conflict("Seat taken by another user");
+      }
+
       return b;
     },
     {
@@ -140,6 +170,7 @@ export async function startBookingCheckout(
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
+    expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 min — matches BOOKING_EXPIRY_MS
     line_items: [
       {
         price_data: {
@@ -168,6 +199,16 @@ export async function listMyBookings(
   tenantId: string,
   db: PrismaClient = defaultPrisma,
 ) {
+  // Lazy expiry: mark stale PENDING bookings as EXPIRED before returning the list
+  await db.booking.updateMany({
+    where: {
+      tenantId,
+      bookingStatus: BookingStatus.PENDING,
+      createdAt: { lt: new Date(Date.now() - BOOKING_EXPIRY_MS) },
+    },
+    data: { bookingStatus: BookingStatus.EXPIRED, paymentStatus: PaymentStatus.FAILED },
+  });
+
   return db.booking.findMany({
     where: { tenantId },
     orderBy: { createdAt: "desc" },
@@ -210,6 +251,52 @@ export async function confirmBookingFromWebhook(
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     },
   );
+}
+
+export async function listVendorBookings(
+  vendorId: string,
+  db: PrismaClient = defaultPrisma,
+) {
+  const rows = await db.booking.findMany({
+    where: { room: { roomType: { property: { vendorId } } } },
+    include: {
+      tenant: { select: { id: true, email: true, displayName: true } },
+      room: { include: { roomType: { include: { property: true } } } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(toAdminBookingDTO);
+}
+
+export async function cancelBooking(
+  bookingId: string,
+  tenantId: string,
+  db: PrismaClient = defaultPrisma,
+) {
+  const booking = await db.booking.findFirst({
+    where: { id: bookingId, tenantId },
+  });
+
+  if (!booking) throw Errors.notFound("Booking");
+  if (booking.bookingStatus !== BookingStatus.PENDING) {
+    throw Errors.conflict("Only PENDING bookings can be cancelled");
+  }
+
+  if (booking.stripeSessionId) {
+    try {
+      await stripe.checkout.sessions.expire(booking.stripeSessionId);
+    } catch {
+      // Session may already be expired/completed — ignore
+    }
+  }
+
+  return db.booking.update({
+    where: { id: bookingId },
+    data: {
+      bookingStatus: BookingStatus.CANCELLED,
+      paymentStatus: PaymentStatus.FAILED,
+    },
+  });
 }
 
 export async function expireBookingFromWebhook(

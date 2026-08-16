@@ -32,3 +32,20 @@ export const myBookings: RequestHandler = async (req, res, next) => {
     next(err);
   }
 };
+
+export const cancel: RequestHandler = async (req, res, next) => {
+  try {
+    await svc.cancelBooking(String(req.params.id!), req.user!.id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const vendorBookings: RequestHandler = async (req, res, next) => {
+  try {
+    res.json(await svc.listVendorBookings(req.user!.id));
+  } catch (err) {
+    next(err);
+  }
+};
