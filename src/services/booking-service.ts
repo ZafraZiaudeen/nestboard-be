@@ -206,7 +206,10 @@ export async function listMyBookings(
       bookingStatus: BookingStatus.PENDING,
       createdAt: { lt: new Date(Date.now() - BOOKING_EXPIRY_MS) },
     },
-    data: { bookingStatus: BookingStatus.EXPIRED, paymentStatus: PaymentStatus.FAILED },
+    data: {
+      bookingStatus: BookingStatus.EXPIRED,
+      paymentStatus: PaymentStatus.FAILED,
+    },
   });
 
   return db.booking.findMany({

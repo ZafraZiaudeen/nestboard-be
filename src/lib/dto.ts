@@ -110,7 +110,8 @@ function money(n: number): string {
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
+  if (parts.length >= 2)
+    return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
   return name.slice(0, 2).toUpperCase();
 }
 
@@ -153,7 +154,9 @@ export function toRoomTypeDTO(roomType: RoomTypeWithRooms): RoomTypeDTO {
         return {
           seatNumber: seatNum,
           isOccupied: !!booking,
-          tenantInitials: booking ? getInitials(booking.tenant.displayName) : null,
+          tenantInitials: booking
+            ? getInitials(booking.tenant.displayName)
+            : null,
         };
       }),
     })),
