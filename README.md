@@ -18,10 +18,13 @@ The **NestBoard** backend is a REST API built with **Express 5** and **TypeScrip
 - **Health Checks**: `/api/health/live` for uptime and `/api/health/ready` for database connectivity.
 - **Graceful Shutdown**: SIGTERM/SIGINT close the HTTP server and disconnect Prisma cleanly, with a 10-second force-kill fallback.
 
+## Document with all the links related to project
+https://docs.google.com/document/d/12UAiaQ-1PiDfTW6s2RhdzWhO8nlJ0XD8jw2iBSHSe6E/edit?usp=sharing
+
 ## Repositories
 
-- **Web Frontend**: [NestBoard Frontend Repository](#)
-- **Mobile App**: [NestBoard Mobile Repository](#)
+- **Web Frontend**: https://github.com/ZafraZiaudeen/nest-board-fe
+- **Mobile App**: https://github.com/ZafraZiaudeen/nest-app
 
 ## Tech Stack
 
