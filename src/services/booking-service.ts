@@ -9,13 +9,11 @@ import { stripe } from "../lib/stripe.js";
 import { toAdminBookingDTO } from "../lib/dto.js";
 import { BOOKING_EXPIRY_MS } from "../lib/constants.js";
 
-function leaseRange(startMonth: string, durationMonths: number) {
+export function leaseRange(startMonth: string, durationMonths: number) {
   const [y, m] = startMonth.split("-").map(Number);
   if (!y || !m) throw Errors.validation("Invalid startMonth format");
   const start = new Date(Date.UTC(y, m - 1, 1));
-  // end date with the extra day
   const endExclusive = new Date(Date.UTC(y, m - 1 + durationMonths, 1));
-  // removing the last day
   const end = new Date(endExclusive.getTime() - 24 * 60 * 60 * 1000);
   return { start, end };
 }

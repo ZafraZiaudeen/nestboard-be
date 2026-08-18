@@ -7,7 +7,7 @@ import {
 import { prisma } from "../lib/prisma.js";
 import { Role, type User } from "../generated/client.js";
 import { validateBody } from "../middleware/validate.js";
-import { loginSchema, registerSchema } from "../schemas/auth.js";
+import { loginSchema, registerSchema, updateProfileSchema } from "../schemas/auth.js";
 import { Errors } from "../lib/errors.js";
 import argon2 from "argon2";
 import { requireRole, verifyJwt } from "../middleware/auth.js";
@@ -121,6 +121,31 @@ authRouter.get("/me", verifyJwt, async (req, res, next) => {
     next(err);
   }
 });
+
+authRouter.patch(
+  "/me",
+  verifyJwt,
+  validateBody(updateProfileSchema),
+  async (req, res, next) => {
+    try {
+      const user = await prisma.user.update({
+        where: { id: req.user!.id },
+        data: req.body,
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          role: true,
+          avatarUrl: true,
+          bioTag: true,
+        },
+      });
+      res.json(user);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 authRouter.post("/google", async (req, res, next) => {
   try {

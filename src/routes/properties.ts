@@ -15,6 +15,7 @@ import {
 import { Errors } from "../lib/errors.js";
 import {
   createRoomSchema,
+  updateRoomSchema,
   createRoomTypeSchema,
   updateRoomTypeSchema,
   type CreateRoomInput,
@@ -22,6 +23,7 @@ import {
 import { requireRole, verifyJwt } from "../middleware/auth.js";
 import { BookingStatus, Role } from "../generated/enums.js";
 import { BOOKING_EXPIRY_MS } from "../lib/constants.js";
+import { parseLeaseWindow } from "../lib/lease-window.js";
 
 export const propertiesRouter: Router = Router();
 
@@ -43,7 +45,38 @@ function getPagination(query: Record<string, unknown>) {
 propertiesRouter.get("/", async (req, res, next) => {
   try {
     const { page, limit, skip, take } = getPagination(req.query);
-    const where = { isActive: true };
+
+    const typeParam   = req.query.type     as string | undefined;
+    const minPrice    = req.query.minPrice ? Number(req.query.minPrice) : undefined;
+    const maxPrice    = req.query.maxPrice ? Number(req.query.maxPrice) : undefined;
+    const cityParam   = req.query.city     as string | undefined;
+    const searchParam = req.query.search   as string | undefined;
+
+    const where: any = { isActive: true };
+
+    if (typeParam && typeParam.toLowerCase() !== "all") {
+      where.type = typeParam.toUpperCase();
+    }
+
+    if (maxPrice !== undefined) {
+      where.roomTypes = {
+        some: {
+          pricePerMonth: {
+            ...(minPrice !== undefined ? { gte: minPrice } : {}),
+            lte: maxPrice,
+          },
+        },
+      };
+    }
+
+    if (cityParam && cityParam.trim().length > 0) {
+      where.city = { in: cityParam.split(",").map((c: string) => c.trim()) };
+    }
+
+    if (searchParam && searchParam.trim().length > 0) {
+      where.title = { contains: searchParam.trim(), mode: "insensitive" };
+    }
+
     const [total, properties] = await prisma.$transaction([
       prisma.property.count({
         where,
@@ -191,15 +224,21 @@ propertiesRouter.patch(
   },
 );
 
-// Returns a Prisma include that counts only bookings that currently block a seat:
-//   - CONFIRMED bookings (always block)
-//   - PENDING bookings still inside the 3-day payment window
-// Called as a function so the cutoff date is fresh on every request.
-function activeBookingsInclude() {
+// Returns a Prisma include that counts only bookings that block a seat.
+// When a lease window is supplied it adds an overlap filter so only bookings
+// that conflict with the requested period are counted:
+//   - CONFIRMED bookings that overlap the window (always block)
+//   - PENDING bookings still inside the 30-min payment window that overlap
+// Without a window it falls back to "any active booking" (current behaviour).
+function activeBookingsInclude(window?: { start: Date; end: Date } | null) {
   const paymentWindowCutoff = new Date(Date.now() - BOOKING_EXPIRY_MS);
+  const overlapFilter = window
+    ? { leaseStart: { lt: window.end }, leaseEnd: { gt: window.start } }
+    : {};
   return {
     bookings: {
       where: {
+        ...overlapFilter,
         OR: [
           { bookingStatus: BookingStatus.CONFIRMED },
           {
@@ -210,7 +249,9 @@ function activeBookingsInclude() {
       },
       select: {
         seatNumber: true,
-        tenant: { select: { displayName: true } },
+        leaseStart: true,
+        leaseEnd: true,
+        tenant: { select: { displayName: true, avatarUrl: true } },
       },
     },
   };
@@ -218,12 +259,13 @@ function activeBookingsInclude() {
 
 propertiesRouter.get("/:id", async (req, res, next) => {
   try {
+    const window = parseLeaseWindow(req.query.startMonth, req.query.durationMonths);
     const property = await prisma.property.findUnique({
       where: { id: req.params.id },
       include: {
         roomTypes: {
           where: { isAvailable: true },
-          include: { rooms: { include: activeBookingsInclude() } },
+          include: { rooms: { include: activeBookingsInclude(window) } },
           orderBy: { createdAt: "asc" },
         },
       },
@@ -300,12 +342,13 @@ propertiesRouter.patch(
 
 propertiesRouter.get("/:id/room-types", async (req, res, next) => {
   try {
+    const window = parseLeaseWindow(req.query.startMonth, req.query.durationMonths);
     const property = await prisma.property.findUnique({
       where: { id: req.params.id },
       include: {
         roomTypes: {
           where: { isAvailable: true },
-          include: { rooms: { include: activeBookingsInclude() } },
+          include: { rooms: { include: activeBookingsInclude(window) } },
           orderBy: { createdAt: "asc" },
         },
       },
@@ -321,6 +364,7 @@ propertiesRouter.get("/:id/room-types", async (req, res, next) => {
 
 propertiesRouter.get("/:id/room-types/:roomTypeId", async (req, res, next) => {
   try {
+    const window = parseLeaseWindow(req.query.startMonth, req.query.durationMonths);
     const roomType = await prisma.roomType.findFirst({
       where: {
         id: req.params.roomTypeId,
@@ -328,7 +372,7 @@ propertiesRouter.get("/:id/room-types/:roomTypeId", async (req, res, next) => {
       },
       include: {
         rooms: {
-          include: activeBookingsInclude(),
+          include: activeBookingsInclude(window),
           orderBy: { roomLabel: "asc" },
         },
       },
@@ -463,8 +507,38 @@ propertiesRouter.delete(
         },
       });
       if (!roomType) throw Errors.notFound("RoomType");
-      await prisma.room.delete({ where: { id: req.params.roomId as string } });
+      await prisma.room.delete({
+        where: { id: req.params.roomId as string, roomTypeId: roomType.id },
+      });
       res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+propertiesRouter.patch(
+  "/:id/room-types/:roomTypeId/rooms/:roomId",
+  verifyJwt,
+  requireRole(Role.ADMIN),
+  validateBody(updateRoomSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) throw Errors.unauthenticated();
+      const roomType = await prisma.roomType.findFirst({
+        where: {
+          id: req.params.roomTypeId as string,
+          propertyId: req.params.id as string,
+          property: { vendorId: userId },
+        },
+      });
+      if (!roomType) throw Errors.notFound("RoomType");
+      const updated = await prisma.room.update({
+        where: { id: req.params.roomId as string, roomTypeId: roomType.id },
+        data: req.body,
+      });
+      res.json(updated);
     } catch (err) {
       next(err);
     }

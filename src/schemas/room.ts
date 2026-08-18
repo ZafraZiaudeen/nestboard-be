@@ -21,3 +21,6 @@ export type CreateRoomInput = z.infer<typeof createRoomSchema>;
 
 export const updateRoomTypeSchema = createRoomTypeSchema.partial();
 export type UpdateRoomTypeInput = z.infer<typeof updateRoomTypeSchema>;
+
+export const updateRoomSchema = createRoomSchema.partial();
+export type UpdateRoomInput = z.infer<typeof updateRoomSchema>;

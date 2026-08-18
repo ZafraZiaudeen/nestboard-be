@@ -82,6 +82,7 @@ export type SeatDTO = {
   seatNumber: number;
   isOccupied: boolean;
   tenantInitials: string | null;
+  tenantAvatarUrl: string | null;
 };
 
 export type RoomDTO = {
@@ -117,7 +118,7 @@ function getInitials(name: string): string {
 
 // bookings is optionally injected by routes that need occupancy data
 type RoomWithBookings = PrismaRoom & {
-  bookings?: { seatNumber: number; tenant: { displayName: string } }[];
+  bookings?: { seatNumber: number; tenant: { displayName: string; avatarUrl: string | null } }[];
 };
 type RoomTypeWithRooms = PrismaRoomType & { rooms: RoomWithBookings[] };
 
@@ -157,6 +158,7 @@ export function toRoomTypeDTO(roomType: RoomTypeWithRooms): RoomTypeDTO {
           tenantInitials: booking
             ? getInitials(booking.tenant.displayName)
             : null,
+          tenantAvatarUrl: booking?.tenant.avatarUrl ?? null,
         };
       }),
     })),
